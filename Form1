@@ -1,0 +1,58 @@
+import anvil.google.auth, anvil.google.drive
+from anvil.google.drive import app_files
+import anvil.users
+from ._anvil_designer import Form1Template
+import anvil
+import time
+anvil.users.login_with_form()
+
+class Form1(Form1Template):
+      
+    def __init__(self, bot_id=None, **properties):
+        self.init_components(**properties)
+        self.c = anvil.Timer(interval=300)
+        self.c.set_event_handler('tick', self.timer_1_tick)
+        self.bot_id = 'default_bot_id'  # Adjusted to have a default bot ID
+
+        self.flow_panel_1.background = 'white'
+        self.new_message_box.border = "none"
+        self.send_btn.foreground = '#4285f4'
+        self.send_btn.background = 'transparent'
+        self.button_bad.foreground = '#ee2e24'
+        self.button_bad.background = 'transparent'
+
+        self.conversation = [{'from': 'bot', 'text': "Hola, soy el bot creado por Civic Compass para mejorar la incidencia. Preguntame lo que desees"}]
+        self.mchat_history = []
+        self.refresh_conversation()
+
+    def timer_1_tick(self, **event_args):
+        anvil.server.call('ping')
+
+    def refresh_conversation(self):
+        self.repeating_panel_1.items = self.conversation
+
+    def send_btn_click(self, **event_args):
+        user_message = self.new_message_box.text
+        self.conversation.append({'from': 'user', 'text': user_message})
+        self.refresh_conversation()
+        self.new_message_box.text = ''
+        self.button_bad.scroll_into_view()
+
+        response, mchat_history = anvil.server.call('send_msg_call', user_message, self.mchat_history)
+        self.mchat_history = mchat_history
+        self.conversation.append({'from': 'bot', 'text': response})
+        self.refresh_conversation()
+        self.button_bad.scroll_into_view()
+
+    def new_message_box_pressed_enter(self, **event_args):
+        self.send_btn_click()
+
+    def button_bad_click(self, **event_args):
+        anvil.server.call('add_question_call', self.mchat_history)
+        self.conversation.append({'from': 'bot', 'text': "I've sent your question to our team of experts!"})
+        self.refresh_conversation()
+        self.button_bad.scroll_into_view()
+
+    def column_panel_1_show(self, **event_args):
+      """This method is called when the column panel is shown on the screen"""
+      pass
