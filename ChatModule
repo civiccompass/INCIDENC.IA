@@ -1,0 +1,57 @@
+import anvil.google.auth, anvil.google.drive, anvil.google.mail
+from anvil.google.drive import app_files
+import anvil.users
+import anvil.server
+import anvil.secrets
+import openai
+from datetime import datetime
+
+# Ensure your OpenAI API key is stored securely in Anvil's Secrets
+OPENAI_API_KEY = anvil.secrets.get_secret('OPENAI_API_KEY')
+openai.api_key = OPENAI_API_KEY
+
+@anvil.server.callable
+def send_msg_call(user_message, mchat_history=[]):
+    """
+    Generate a response using the OpenAI API, based on the conversation history.
+    This function is updated to comply with the OpenAI API client library version 1.0.0+.
+    """
+    # Add the latest user message to the conversation history
+    mchat_history.append(('user', user_message))
+    
+    # Prepare the conversation history as a prompt for the OpenAI API
+    prompt = format_conversation_for_openai(mchat_history)
+    
+    # Updated call to match the OpenAI API client library version 1.0.0+
+    response = openai.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "system", "content": "You are a helpful assistant ."}] + 
+                 [{"role": "user" if speaker == 'user' else "assistant", "content": message} for speaker, message in mchat_history],
+        temperature=0.7
+    )
+    
+    bot_response = response_message = response.choices[0].message.content
+    mchat_history.append(('bot', bot_response))
+    
+    return bot_response, mchat_history
+
+def format_conversation_for_openai(mchat_history):
+    """
+    Formats the conversation history into a string prompt for OpenAI.
+    This function may no longer be necessary if using the structured input for ChatCompletion.create.
+    """
+    formatted_history = ""
+    for speaker, message in mchat_history:
+        formatted_history += f"{speaker.title()}: {message}\n"
+    return formatted_history
+
+@anvil.server.callable
+def add_question_call(mchat_history):
+    """
+    Placeholder function to handle user questions or feedback.
+    """
+    # Example action: log the question
+    question = mchat_history[-1][1]  # Assuming the last entry is the user's question
+    print(f"Logging question: {question}")
+    # Implement actual logging or handling here
+    return "Question logged"
